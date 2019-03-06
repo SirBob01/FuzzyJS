@@ -1,0 +1,27 @@
+{
+  "name": "fuzzyjs",
+  "version": "1.0.0",
+  "description": "A lightweight fuzzy search algorithm",
+  "main": "src/fuzzy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SirBob01/FuzzyJS.git"
+  },
+  "keywords": [
+    "fuzzy",
+    "javascript",
+    "string",
+    "distance",
+    "similarity",
+    "search"
+  ],
+  "author": "Keith Leonardo <kleonardo52@gmail.com> (https://keithleonardo.ml/)",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/SirBob01/FuzzyJS/issues"
+  },
+  "homepage": "https://github.com/SirBob01/FuzzyJS#readme"
+}
