@@ -3,10 +3,11 @@ function Fuzzy() {
 	self.gram_db = {};
 	self.options = {
 		sort : true,
+		nGram : 3,
 		minCharLength : 2,
-		maxDistance : 0.5,
-		findAllMatches : false,
-		nGram : 3
+		maxDistance : 0.4,
+		enableDamLev : true,
+		findAllMatches : false
 	};
 
 	self.normalize = function(string) {
@@ -50,29 +51,6 @@ function Fuzzy() {
 			}
 		}
 		return grams;
-	}
-
-	self.n_gram = function(key, query) {
-		// Compares word structure of two sentences
-		// Vectorizes strings and calculates cosine distance
-		// Returns (a.b)/(|a||b|)
-		var q_grams = self.gram_counter(query);
-		var k_phrase = self.normalize(key);
-		
-		var dot = 0;
-		var a_mag = 0;
-		var b_mag = 0;
-
-		for(var g in q_grams) {
-			if(g in self.gram_db && k_phrase in self.gram_db[g]) {
-				dot += q_grams[g]*self.gram_db[g][k_phrase];
-
-				a_mag += Math.pow(q_grams[g], 2);
-				b_mag += Math.pow(self.gram_db[g][k_phrase], 2);
-			}
-		}
-		if(a_mag*b_mag == 0) return 1; // Completely different strings
-		else return 1-dot/Math.sqrt(a_mag*b_mag);
 	}
 
 	self.damlev_distance = function(a, b) {
@@ -121,24 +99,75 @@ function Fuzzy() {
 		return matrix[m-1][n-1];
 	}
 
-	self.edit_distance = function(a, b) {
-		// Normalize
-		var total_distance = self.damlev_distance(a, b);
-		var n = a.length;
-		var m = b.length;
+	self.n_gram = function(key, query) {
+		// Compares word structure of two sentences
+		// Vectorizes strings and calculates cosine similarity
+		// Returns (a.b)/(|a||b|)
+		var q_grams = self.gram_counter(query);
+		var k_phrase = self.normalize(key);
+		
+		var dot = 0;
+		var a_mag = 0;
+		var b_mag = 0;
 
-		if(n > m) return total_distance/n;
-		else if(m > m) return total_distance/m;
-		else return total_distance/((n+m)/2);
+		for(var g in q_grams) {
+			if(g in self.gram_db && k_phrase in self.gram_db[g]) {
+				dot += q_grams[g]*self.gram_db[g][k_phrase];
+
+				a_mag += Math.pow(q_grams[g], 2);
+				b_mag += Math.pow(self.gram_db[g][k_phrase], 2);
+			}
+		}
+		if(a_mag*b_mag == 0) return 0; // Completely different strings
+		else return dot/Math.sqrt(a_mag*b_mag);
 	}
 
-	self.total_distance = function(key, query) {
-		// Takes into account comparison operators (n-gram, edit distance)
-		var edit = self.edit_distance(key, query);
-		var gram = self.n_gram(key, query);
+	self.edit_similarity = function(key, query) {
+		// Normalize
+		var k_t = key.split(" ");
+		var q_t = query.split(" ");
 
-		// Prioritize n-gram because edits only account for misspellings
-		var score = edit*0.4 + gram*0.6;
+		// b_t needs to be the shorter sequence
+		if(q_t.length > k_t.length) {
+			var temp = q_t;
+			q_t = k_t;
+			k_t = temp;
+		}
+
+		var long = k_t.length;
+		var short = q_t.length;
+
+		var similarity = 0; // Assume strings are completely different
+		// Not sure how to optimize, worst case is O(long*short)
+		// Negligible for short queries, I guess?
+		for(var i = 0; i < long-short+1; i++) {
+			var substring = k_t.slice(i, i+short);
+			var local_distance = 0;
+			for(var j = 0; j < short; j++) {
+				var dist = self.damlev_distance(substring[j], q_t[j]);
+				var norm = Math.max(substring[j].length, q_t[j].length);
+				local_distance += dist/norm;
+			}
+			if(local_distance/short < self.options.maxDistance) {
+				similarity = 1-(local_distance/short);
+				break;
+			}
+		}
+		return similarity;
+	}
+
+	self.compare = function(key, query) {
+		// Takes into account comparison operators (n-gram, edit distance)
+		var gram = self.n_gram(key, query);
+		if(self.options.enableDamLev) {
+			var edit = self.edit_similarity(key, query);
+	
+			// Prioritize n-gram because edits only account for misspellings
+			var score = edit*0.35 + gram*0.65;
+		}
+		else {
+			var score = gram;
+		}
 		return score;
 	}
 
@@ -149,19 +178,19 @@ function Fuzzy() {
 		// Matches string against members of a dictionary
 		for(var i = 0; i < dict.length; i++) {
 			var current = dict[i];
-			var d = self.total_distance(current, query);
+			var s = self.compare(current, query);
 			
-			if(d < self.options.maxDistance) {
+			if(s > 1-self.options.maxDistance) {
 				matches.push(current);
 			}
 		}
 
 		if(self.options.sort) {
 			matches.sort(function(a, b) {
-				var dA = self.total_distance(a, query);
-				var dB = self.total_distance(b, query);
-				if(dA < dB) return 1;
-				if(dB < dA) return -1;
+				var sA = self.compare(a, query);
+				var sB = self.compare(b, query);
+				if(sA < sB) return 1;
+				if(sB < sA) return -1;
 				return 0;
 			});
 		}
