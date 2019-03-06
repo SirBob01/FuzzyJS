@@ -3,11 +3,10 @@ function Fuzzy() {
 	self.gram_db = {};
 	self.options = {
 		sort : true,
-		nGram : 3,
-		minCharLength : 2,
-		maxDistance : 0.4,
-		enableDamLev : true,
-		findAllMatches : false
+		n_size : 3,
+		min_query : 2,
+		min_similarity : 0.6,
+		all_matches : false
 	};
 
 	self.normalize = function(string) {
@@ -18,7 +17,7 @@ function Fuzzy() {
 	self.index = function(dict) {
 		// Pre-process dictionary for fast n-gram search
 		self.gram_db = {};
-		var n = self.options.nGram;
+		var n = self.options.n_size;
 
 		for(var i = 0; i < dict.length; i++) {	
 			var phrase = self.normalize(dict[i]);
@@ -39,7 +38,7 @@ function Fuzzy() {
 		// Calculates local n-grams of query phrase
 		var phrase = self.normalize(phrase);
 		var grams = {};
-		var n = self.options.nGram;
+		var n = self.options.n_size;
 
 		for(var i = 0; i < phrase.length-n+1; i++) {
 			g = phrase.slice(i, i+n);
@@ -148,7 +147,7 @@ function Fuzzy() {
 				var norm = Math.max(substring[j].length, q_t[j].length);
 				local_distance += dist/norm;
 			}
-			if(local_distance/short < self.options.maxDistance) {
+			if(local_distance/short < 1-self.options.min_similarity) {
 				similarity = 1-(local_distance/short);
 				break;
 			}
@@ -159,28 +158,22 @@ function Fuzzy() {
 	self.compare = function(key, query) {
 		// Takes into account comparison operators (n-gram, edit distance)
 		var gram = self.n_gram(key, query);
-		if(self.options.enableDamLev) {
-			var edit = self.edit_similarity(key, query);
-	
-			// Prioritize n-gram because edits only account for misspellings
-			var score = edit*0.35 + gram*0.65;
-		}
-		else {
-			var score = gram;
-		}
-		return score;
+		var edit = self.edit_similarity(key, query);
+
+		// Prioritize n-gram because edits only account for misspellings
+		return edit*0.35 + gram*0.65;
 	}
 
 	self.search = function(dict, query) {
 		var matches = [];
-		if(query.length < self.options.minCharLength) return dict;
+		if(query.length < self.options.min_query) return dict;
 
 		// Matches string against members of a dictionary
 		for(var i = 0; i < dict.length; i++) {
 			var current = dict[i];
 			var s = self.compare(current, query);
 			
-			if(s > 1-self.options.maxDistance) {
+			if(s > self.options.min_similarity) {
 				matches.push(current);
 			}
 		}
@@ -197,7 +190,7 @@ function Fuzzy() {
 
 		if(matches.length == 0) return dict;
 
-		if(self.options.findAllMatches) {
+		if(self.options.all_matches) {
 			return matches;
 		}
 		else {
