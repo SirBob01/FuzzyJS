@@ -1,14 +1,81 @@
 function Fuzzy() {
 	var self = this; // Keep context of parent prototype
-
+	self.gram_db = {};
 	self.options = {
 		sort : true,
 		minCharLength : 2,
-		maxDistance : 10,
-		findAllMatches : false
+		maxDistance : 0.5,
+		findAllMatches : false,
+		nGram : 3
 	};
 
-	self.distance = function(a, b) {
+	self.normalize = function(string) {
+		// Removes all non-alphanumeric characters
+		return string.toLowerCase().replace(/(\W)+/g,'');
+	}
+
+	self.index = function(dict) {
+		// Pre-process dictionary for fast n-gram search
+		self.gram_db = {};
+		var n = self.options.nGram;
+
+		for(var i = 0; i < dict.length; i++) {	
+			var phrase = self.normalize(dict[i]);
+			for(var j = 0; j < phrase.length-n+1; j++) {
+				var gram = phrase.slice(j, j+n);
+				if(gram in self.gram_db && phrase in self.gram_db[gram]) {
+					self.gram_db[gram][phrase]++;
+				}
+				else {
+					self.gram_db[gram] = {};
+					self.gram_db[gram][phrase] = 1;
+				}
+			}
+		}
+	}
+
+	self.gram_counter = function(phrase) {
+		// Calculates local n-grams of query phrase
+		var phrase = self.normalize(phrase);
+		var grams = {};
+		var n = self.options.nGram;
+
+		for(var i = 0; i < phrase.length-n+1; i++) {
+			g = phrase.slice(i, i+n);
+			if(g in grams) {
+				grams[g]++;
+			}
+			else {
+				grams[g] = 1;
+			}
+		}
+		return grams;
+	}
+
+	self.n_gram = function(key, query) {
+		// Compares word structure of two sentences
+		// Vectorizes strings and calculates cosine distance
+		// Returns (a.b)/(|a||b|)
+		var q_grams = self.gram_counter(query);
+		var k_phrase = self.normalize(key);
+		
+		var dot = 0;
+		var a_mag = 0;
+		var b_mag = 0;
+
+		for(var g in q_grams) {
+			if(g in self.gram_db && k_phrase in self.gram_db[g]) {
+				dot += q_grams[g]*self.gram_db[g][k_phrase];
+
+				a_mag += Math.pow(q_grams[g], 2);
+				b_mag += Math.pow(self.gram_db[g][k_phrase], 2);
+			}
+		}
+		if(a_mag*b_mag == 0) return 1; // Completely different strings
+		else return 1-dot/Math.sqrt(a_mag*b_mag);
+	}
+
+	self.damlev_distance = function(a, b) {
 		// Damerau-Levenshtein distance
 		var a = a.toLowerCase();
 		var b = b.toLowerCase();
@@ -50,63 +117,62 @@ function Fuzzy() {
 				}
 			}
 		}
+
 		return matrix[m-1][n-1];
 	}
 
-	self.score = function(a, b) {
-		// Tokenizes strings and solves for total distance between words
-		var a = a.split(" ");
-		var b = b.split(" ");
+	self.edit_distance = function(a, b) {
+		// Normalize
+		var total_distance = self.damlev_distance(a, b);
+		var n = a.length;
+		var m = b.length;
 
-		var m = a.length;
-		var n = b.length;
-
-		var sum = 0;
-
-		/* If one is shorter, only calculate distance with
-		subsection of the longer string */
-		if(m <= n) {
-			for(var i = 0; i < m; i++) {
-				sum += self.distance(a[i], b[i]);
-			}
-		}
-		if(n <= m) {	
-			for(var i = 0; i < n; i++) {
-				sum += self.distance(a[i], b[i]);
-			}
-		}
-		return sum;
+		if(n > m) return total_distance/n;
+		else if(m > m) return total_distance/m;
+		else return total_distance/((n+m)/2);
 	}
 
-	self.search = function(word, dict) {
-		// Matches string against members of a dictionary
+	self.total_distance = function(key, query) {
+		// Takes into account comparison operators (n-gram, edit distance)
+		var edit = self.edit_distance(key, query);
+		var gram = self.n_gram(key, query);
+
+		// Prioritize n-gram because edits only account for misspellings
+		var score = edit*0.4 + gram*0.6;
+		return score;
+	}
+
+	self.search = function(dict, query) {
 		var matches = [];
-		if(word.length < self.options.minCharLength) {
-			return [];
-		}
+		if(query.length < self.options.minCharLength) return dict;
 
+		// Matches string against members of a dictionary
 		for(var i = 0; i < dict.length; i++) {
-			var current_word = dict[i];
-			var d = self.score(word, current_word);
+			var current = dict[i];
+			var d = self.total_distance(current, query);
 			
-			if(!self.options.findAllMatches && d == 0) {
-				return [current_word];
-			}
-
 			if(d < self.options.maxDistance) {
-				matches.push(current_word);
+				matches.push(current);
 			}
 		}
 
 		if(self.options.sort) {
 			matches.sort(function(a, b) {
-				var dA = self.score(word, a);
-				var dB = self.score(word, b);
-				if(dA < dB) return -1;
-				if(dB < dA) return 1;
+				var dA = self.total_distance(a, query);
+				var dB = self.total_distance(b, query);
+				if(dA < dB) return 1;
+				if(dB < dA) return -1;
 				return 0;
-			});		
+			});
 		}
-		return matches;
+
+		if(matches.length == 0) return dict;
+
+		if(self.options.findAllMatches) {
+			return matches;
+		}
+		else {
+			return [matches[0]];
+		}
 	}
 }
