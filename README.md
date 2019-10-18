@@ -19,12 +19,12 @@ fuzzy.options = {
     sort : true,            // Sort result by score
     n_size : 3,             // N-gram size
     min_query : 2,          // Minimum query length
-    min_similarity : 0.6,   // Threshold similarity score
+    min_similarity : 0.7,   // Threshold similarity score
     all_matches : true      // Return all potential matches?
 };
 ```
 
-3. Index the search space into the fuzzy engine.
+3. Index the search space into the Fuzzy engine.
 ```js
 var keys = ["Hello", "Helper", "world", "bob"];
 fuzzy.index(keys);
@@ -32,5 +32,5 @@ fuzzy.index(keys);
 
 4. Search for a query and get an array of matches.
 ```js
-var results = fuzzy.search(keys, "Hel"); // ["Hello", "Helper"]
+var results = fuzzy.search("Hel"); // ["Hello", "Helper"]
 ```
