@@ -1,6 +1,6 @@
 # FuzzyJS
 
-A lightweight fuzzy search algorithm that calculates a weighted similarity score between two strings.
+A lightweight fuzzy search algorithm. It uses the Damerau–Levenshtein algorithm to calculate the edit distance between each pair of tokens in the strings and an n-gram hashtable to probabilistically determine their weighted similarity score.
 
 # Dependencies
 
