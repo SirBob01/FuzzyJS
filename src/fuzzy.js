@@ -214,10 +214,10 @@ function Fuzzy() {
         if(self.options.sort) {
             matches.sort(function(a, b) {
                 if(scores[a] < scores[b]) {
-                    return 1;
-                }
-                if(scores[b] < scores[b]) {
                     return -1;
+                }
+                if(scores[b] < scores[a]) {
+                    return 1;
                 }
                 return 0;
             });
