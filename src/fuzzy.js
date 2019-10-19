@@ -199,9 +199,9 @@ function Fuzzy() {
         var matches = [];
 
         if(query.length < self.options.min_query) {
-            return dict;
+            return [];
         }
-
+        
         // Matches string against members of a dictionary
         for(var i = 0; i < dict.length; i++) {
             var current = dict[i];
@@ -214,24 +214,23 @@ function Fuzzy() {
         if(self.options.sort) {
             matches.sort(function(a, b) {
                 if(scores[a] < scores[b]) {
-                    return -1;
+                    return 1;
                 }
                 if(scores[b] < scores[a]) {
-                    return 1;
+                    return -1;
                 }
                 return 0;
             });
         }
-
-        if(matches.length == 0) {
-            return dict;
-        }
-
+        
         if(self.options.all_matches) {
             return matches;
         }
-        else {
+        else if(matches.length) {
             return [matches[0]];
+        }
+        else {
+            return [];
         }
     }
 }
