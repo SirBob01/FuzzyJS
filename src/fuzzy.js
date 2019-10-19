@@ -5,7 +5,8 @@ function Fuzzy() {
         sort : true,
         n_size : 3,
         min_query : 2,
-        min_similarity : 0.7,
+        score_threshold : 0.4,
+        edit_threshold : 0.8,
         all_matches : true
     };
 
@@ -68,12 +69,8 @@ function Fuzzy() {
         var m = a.length;
         var n = b.length;
         
-        if(m == 0) {
-            return n;
-        }
-        if(n == 0) {
-            return m;
-        }
+        if(m == 0) return n;
+        if(n == 0) return m;
 
         var matrix = new Array(m+1);
         for(var i = 0; i <= m; i++) {
@@ -113,9 +110,8 @@ function Fuzzy() {
     }
 
     self.n_gram = function(key, query) {
-        // Compares word structure of two sentences
+        // Compares structure of two normalized strings
         // Vectorizes strings and calculates cosine similarity
-        // Returns (a.b)/(|a||b|)
         var q_grams = self.gram_counter(query);
         
         var dot = 0;
@@ -123,73 +119,77 @@ function Fuzzy() {
         var b_mag = 0;
 
         for(var g in q_grams) {
-            if(key in self.gram_db && g in self.gram_db[key]) {
-                dot += q_grams[g]*self.gram_db[key][g];
-
-                a_mag += Math.pow(q_grams[g], 2);
+            a_mag += Math.pow(q_grams[g], 2);
+            
+            if(key in self.gram_db) {
                 b_mag += Math.pow(self.gram_db[key][g], 2);
-            }
-        }
 
-        if(a_mag*b_mag == 0) {
+                if(g in self.gram_db[key]) {
+                    dot += q_grams[g]*self.gram_db[key][g];
+                }
+            } 
+        }
+        
+        var mag_prod = a_mag*b_mag;
+        if(mag_prod == 0) {
             return 0; // Completely different strings  
         } 
         else {
-            return dot/Math.sqrt(a_mag*b_mag);  
+            return dot/Math.sqrt(mag_prod);  
         } 
     }
 
-    self.edit_similarity = function(key, query) {
-        // Normalize
-        var k_t = key.split(" ");
-        var q_t = query.split(" ");
+    self.jaccard_index = function(a, b) {
+        // Proportion of the intersection of two strings
+        var tokens_a = a.split(" ");
+        var tokens_b = b.split(" ");
 
-        // b_t needs to be the shorter sequence
-        if(q_t.length > k_t.length) {
-            var temp = q_t;
-            q_t = k_t;
-            k_t = temp;
+        // Unique tokens of each string
+        var set_a = [];
+        var set_b = [];
+
+        for(var i = 0; i < tokens_a.length; i++) {
+            var t = tokens_a[i];
+            if(!set_a.includes(t)) {
+                set_a.push(t);
+            }
         }
-
-        var long = k_t.length;
-        var short = q_t.length;
-
-        // Assume strings are completely different
-        var similarity = 0; 
         
-        // Not sure how to optimize, worst case is O(long*short)
-        // Negligible for short queries, I guess?
-        for(var i = 0; i < long-short+1; i++) {
-            var substring = k_t.slice(i, i+short);
-            var local_distance = 0;
-
-            for(var j = 0; j < short; j++) {
-                var dist = self.damlev_distance(
-                    substring[j], 
-                    q_t[j]
-                );
-                var norm = Math.max(
-                    substring[j].length, 
-                    q_t[j].length
-                );
-                local_distance += dist/norm;
-            }
-            if(local_distance/short < 1-self.options.min_similarity) {
-                similarity = 1-(local_distance/short);
-                break;
+        for(var i = 0; i < tokens_b.length; i++) {
+            var t = tokens_b[i];
+            if(!set_b.includes(t)) {
+                set_b.push(t);
             }
         }
 
-        return similarity;
+        var intersection = 0;
+        var total = set_a.length + set_b.length;
+
+        for(var i = 0; i < set_a.length; i++) {
+            for(var j = 0; j < set_b.length; j++) {
+                var t_a = set_a[i];
+                var t_b = set_b[j];
+
+                // Test token pair similarity
+                var dist = self.damlev_distance(t_a, t_b);
+                var norm = Math.max(t_a.length, t_b.length);
+                
+                if(dist/norm < 1-self.options.edit_threshold) {
+                    intersection++;
+                }
+            }
+        }
+
+        return intersection / (total - intersection);
     }
 
     self.compare = function(key, query) {
-        // Takes into account comparison operators (n-gram, edit distance)
-        var gram = self.n_gram(key, query);
-        var edit = self.edit_similarity(key, query);
+        // Takes into account comparison operators
+        var grams = self.n_gram(key, query);
+        var intersection = self.jaccard_index(key, query);
 
-        // Prioritize n-gram because edits only account for misspellings
-        var score = edit*0.2 + gram*0.8;
+        // Final score
+        var score = (intersection + grams) / 2;
         return score;
     }
 
@@ -198,15 +198,15 @@ function Fuzzy() {
         var scores = {};
         var matches = [];
 
-        if(query.length < self.options.min_query) {
+        if(query.length < self.options.min_query || dict.length == 0) {
             return [];
         }
-        
+
         // Matches string against members of a dictionary
         for(var i = 0; i < dict.length; i++) {
             var current = dict[i];
             scores[current] = self.compare(current, query);
-            if(scores[current] > self.options.min_similarity) {
+            if(scores[current] >= self.options.score_threshold) {
                 matches.push(current);
             }
         }

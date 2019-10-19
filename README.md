@@ -1,6 +1,6 @@
 # FuzzyJS
 
-A lightweight fuzzy search implementation for JavaScript. It uses the Damerau–Levenshtein algorithm to calculate the edit distance between each pair of tokens in the strings and an n-gram hashtable to probabilistically determine their weighted similarity score.
+A lightweight fuzzy search implementation for JavaScript. It uses the Jaccard index for intersections, the Damerau–Levenshtein algorithm to measure the edit distance between token pairs, and an n-gram hashtable to probabilistically determine the total weighted similarity score.
 
 # Dependencies
 
@@ -13,13 +13,14 @@ None. Pure JavaScript.
 var fuzzy = new Fuzzy();
 ```
 
-2. Set the parameters for the search.
+2. Set the parameters for the search. The scores calculated by the engine range from 0 (completely different) to 1.0 (exact match).
 ```js
 fuzzy.options = {
-    sort : true,            // Sort result by score
+    sort : true,            // Sort results by final score
     n_size : 3,             // N-gram size
     min_query : 2,          // Minimum query length
-    min_similarity : 0.7,   // Threshold similarity score
+    score_threshold : 0.4,  // Minimum total similarity score
+    edit_threshold : 0.8,   // Minimum edit score
     all_matches : true      // Return all potential matches?
 };
 ```
