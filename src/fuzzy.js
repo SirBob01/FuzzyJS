@@ -6,7 +6,7 @@ function Fuzzy() {
         n_size : 3,
         min_query : 2,
         score_threshold : 0.4,
-        edit_threshold : 0.8,
+        edit_threshold : 0.6,
         all_matches : true
     };
 
@@ -18,13 +18,16 @@ function Fuzzy() {
 
     self.index = function(dict) {
         // Pre-process dictionary for fast n-gram search
-        self.gram_db = {};
         var n = self.options.n_size;
 
         for(var i = 0; i < dict.length; i++) {
-            self.gram_db[dict[i]] = {};
+            if(dict[i] in self.gram_db) {
+                continue;
+            }
 
+            self.gram_db[dict[i]] = {};
             phrase = self.normalize(dict[i]);
+
             for(var j = 0; j < phrase.length-n+1; j++) {
                 var gram = phrase.slice(j, j+n);
 
@@ -62,7 +65,8 @@ function Fuzzy() {
     }
 
     self.damlev_distance = function(a, b) {
-        // Damerau-Levenshtein distance
+        // Damerau-Levenshtein algorithm
+        // Calculate edit distance between two strings
         var a = a.toLowerCase();
         var b = b.toLowerCase();
 
@@ -141,8 +145,9 @@ function Fuzzy() {
         } 
     }
 
-    self.jaccard_index = function(a, b) {
-        // Proportion of the intersection of two strings
+    self.overlap_coefficient = function(a, b) {
+        // Szymkiewicz–Simpson coefficient 
+        // Calculates overlap proportion relative to the smaller string
         var tokens_a = a.split(" ");
         var tokens_b = b.split(" ");
 
@@ -151,21 +156,21 @@ function Fuzzy() {
         var set_b = [];
 
         for(var i = 0; i < tokens_a.length; i++) {
-            var t = tokens_a[i];
+            var t = tokens_a[i].toLowerCase();
             if(!set_a.includes(t)) {
                 set_a.push(t);
             }
         }
         
         for(var i = 0; i < tokens_b.length; i++) {
-            var t = tokens_b[i];
+            var t = tokens_b[i].toLowerCase();
             if(!set_b.includes(t)) {
                 set_b.push(t);
             }
         }
 
         var intersection = 0;
-        var total = set_a.length + set_b.length;
+        var rel = Math.min(set_a.length, set_b.length);
 
         for(var i = 0; i < set_a.length; i++) {
             for(var j = 0; j < set_b.length; j++) {
@@ -176,22 +181,22 @@ function Fuzzy() {
                 var dist = self.damlev_distance(t_a, t_b);
                 var norm = Math.max(t_a.length, t_b.length);
                 
-                if(dist/norm < 1-self.options.edit_threshold) {
+                if(1-dist/norm >= self.options.edit_threshold) {
                     intersection++;
                 }
             }
         }
 
-        return intersection / (total - intersection);
+        return intersection / rel;
     }
 
     self.compare = function(key, query) {
         // Takes into account comparison operators
         var grams = self.n_gram(key, query);
-        var intersection = self.jaccard_index(key, query);
+        var overlap = self.overlap_coefficient(key, query);
 
         // Final score
-        var score = (intersection + grams) / 2;
+        var score = Math.sqrt(overlap*overlap + grams*grams) / 2;
         return score;
     }
 

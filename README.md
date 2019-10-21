@@ -20,7 +20,7 @@ fuzzy.options = {
     n_size : 3,             // N-gram size
     min_query : 2,          // Minimum query length
     score_threshold : 0.4,  // Minimum total similarity score
-    edit_threshold : 0.8,   // Minimum edit score
+    edit_threshold : 0.6,   // Minimum edit score
     all_matches : true      // Return all potential matches?
 };
 ```
