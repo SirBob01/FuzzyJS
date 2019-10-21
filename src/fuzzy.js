@@ -120,14 +120,16 @@ function Fuzzy() {
 
         for(var g in q_grams) {
             a_mag += Math.pow(q_grams[g], 2);
-            
-            if(key in self.gram_db) {
-                b_mag += Math.pow(self.gram_db[key][g], 2);
 
-                if(g in self.gram_db[key]) {
-                    dot += q_grams[g]*self.gram_db[key][g];
-                }
+            if(key in self.gram_db && g in self.gram_db[key]) {
+                dot += q_grams[g]*self.gram_db[key][g];
             } 
+        }
+
+        if(key in self.gram_db) {
+            for(var g in self.gram_db[key]) {
+                b_mag += Math.pow(self.gram_db[key][g], 2);
+            }
         }
         
         var mag_prod = a_mag*b_mag;
