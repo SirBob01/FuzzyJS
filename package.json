@@ -18,7 +18,7 @@
     "similarity",
     "search"
   ],
-  "publishConfig" : {
+  "publishConfig": {
     "registry": "https://npm.pkg.github.com/" 
   },
   "author": "Keith Leonardo <kleonardo52@gmail.com> (https://keithleonardo.ml/)",
