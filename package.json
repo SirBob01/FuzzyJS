@@ -1,5 +1,5 @@
 {
-  "name": "fuzzyjs",
+  "name": "@sirbob01/fuzzyjs",
   "version": "1.0.0",
   "description": "A lightweight fuzzy search algorithm",
   "main": "src/fuzzy.js",
