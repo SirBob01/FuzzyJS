@@ -4,7 +4,7 @@
   "description": "A lightweight fuzzy search algorithm",
   "main": "src/fuzzy.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "var fuzzy = new Fuzzy();"
   },
   "repository": {
     "type": "git",
@@ -12,15 +12,9 @@
   },
   "keywords": [
     "fuzzy",
-    "javascript",
-    "string",
-    "distance",
-    "similarity",
-    "search"
+    "search",
+    "string-match"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "author": "Keith Leonardo <kleonardo52@gmail.com> (https://keithleonardo.ml/)",
   "license": "BSD-3-Clause",
   "bugs": {
