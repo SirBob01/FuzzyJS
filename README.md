@@ -44,6 +44,6 @@ var results = fuzzy.search("hell"); // ["Hello", "Helper"]
 
 ## License
 
-Code and documentation Copyright (c) 2018-2020 Keith Leonardo
+Code and documentation Copyright (c) 2019-2020 Keith Leonardo
 
 Code released under the [BSD 3 License](https://choosealicense.com/licenses/bsd-3-clause/).
