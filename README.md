@@ -1,12 +1,18 @@
 # FuzzyJS
 
-A lightweight fuzzy search implementation for JavaScript. It uses the Overlap coefficient for an intersection test, the Damerau–Levenshtein algorithm to measure the edit distance between token pairs, and an n-gram hashtable to probabilistically determine the total weighted similarity score.
+This library is a lightweight fuzzy search implementation for JavaScript. It uses the following metrics to determine the similarity of two strings:
 
-# Dependencies
+- Measure the edit distance between token pairs with the Damerau–Levenshtein algorithm
+- Test token set intersections using the overlap coefficient formula
+- N-gram hash table
 
-None. Pure JavaScript.
+All three metrics are used to produce a weighted similarity score.
 
-# Basic Usage
+## Dependencies
+
+None, just vanilla JavaScript.
+
+## Basic Usage
 
 1. Create a new `Fuzzy()` object.
 ```js
@@ -35,3 +41,9 @@ fuzzy.index(keys);
 ```js
 var results = fuzzy.search("hell"); // ["Hello", "Helper"]
 ```
+
+## License
+
+Code and documentation Copyright (c) 2018-2020 Keith Leonardo
+
+Code released under the [BSD 3 License](https://choosealicense.com/licenses/bsd-3-clause/).
