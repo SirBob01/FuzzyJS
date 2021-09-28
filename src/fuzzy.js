@@ -1,59 +1,60 @@
-function Fuzzy() {
-    var self = this; // Keep context of parent prototype
-    self.gram_db = {};
-    self.options = {
-        sort : true,
-        n_size : 3,
-        min_query : 2,
-        score_threshold : 0.4,
-        edit_threshold : 0.6,
-        all_matches : true
-    };
+class Fuzzy {
+    constructor() {
+        this.gram_db = {};
+        this.options = {
+            sort : true,
+            n_size : 3,
+            min_query : 2,
+            score_threshold : 0.4,
+            edit_threshold : 0.6,
+            all_matches : true
+        };
+    }
 
-    self.normalize = function(string) {
+    normalize(string) {
         // Lowercase and no whitespace
-        var norm = string.toLowerCase().replace(/\s/g, '');
+        let norm = string.toLowerCase().replace(/\s/g, '');
         return norm;
     }
 
-    self.index = function(dict) {
+    index(dict) {
         // Pre-process dictionary for fast n-gram search
-        var n = self.options.n_size;
+        let n = this.options.n_size;
 
-        for(var i = 0; i < dict.length; i++) {
-            if(dict[i] in self.gram_db) {
+        for(let i = 0; i < dict.length; i++) {
+            if(dict[i] in this.gram_db) {
                 continue;
             }
 
-            self.gram_db[dict[i]] = {};
-            phrase = self.normalize(dict[i]);
+            this.gram_db[dict[i]] = {};
+            let phrase = this.normalize(dict[i]);
 
-            for(var j = 0; j < phrase.length-n+1; j++) {
-                var gram = phrase.slice(j, j+n);
+            for(let j = 0; j < phrase.length-n+1; j++) {
+                let gram = phrase.slice(j, j+n);
 
-                if(gram in self.gram_db[dict[i]]) {
-                    self.gram_db[dict[i]][gram]++;
+                if(gram in this.gram_db[dict[i]]) {
+                    this.gram_db[dict[i]][gram]++;
                 }
                 else {
-                    self.gram_db[dict[i]][gram] = 1;
+                    this.gram_db[dict[i]][gram] = 1;
                 }
             }
         }
     }
 
-    self.reset = function() {
+    reset() {
         // Reset the local dictionary
-        self.gram_db = {};
+        this.gram_db = {};
     }
 
-    self.gram_counter = function(phrase) {
+    gram_counter(phrase) {
         // Calculates n-grams of a phrase
-        var phrase = self.normalize(phrase);
-        var n = self.options.n_size;
-        var grams = {};
+        phrase = this.normalize(phrase);
+        let n = this.options.n_size;
+        let grams = {};
 
-        for(var i = 0; i < phrase.length-n+1; i++) {
-            g = phrase.slice(i, i+n);
+        for(let i = 0; i < phrase.length-n+1; i++) {
+            let g = phrase.slice(i, i+n);
             if(g in grams) {
                 grams[g]++;
             }
@@ -64,32 +65,33 @@ function Fuzzy() {
         return grams;
     }
 
-    self.damlev_distance = function(a, b) {
+    damlev_distance(a, b) {
         // Damerau-Levenshtein algorithm
         // Calculate edit distance between two strings
-        var a = a.toLowerCase();
-        var b = b.toLowerCase();
+        a = a.toLowerCase();
+        b = b.toLowerCase();
 
-        var m = a.length;
-        var n = b.length;
+        let m = a.length;
+        let n = b.length;
         
         if(m == 0) return n;
         if(n == 0) return m;
 
-        var matrix = new Array(m+1);
-        for(var i = 0; i <= m; i++) {
+        let matrix = new Array(m+1);
+        for(let i = 0; i <= m; i++) {
             matrix[i] = new Array(n+1).fill(0);
         }
         
-        for(var i = 1; i <= m; i++) {
+        for(let i = 1; i <= m; i++) {
             matrix[i][0] = i;
         }
-        for(var j = 1; j <= n; j++) {
+        for(let j = 1; j <= n; j++) {
             matrix[0][j] = j;
         }
         
-        for(var j = 1; j <= n; j++) {
-            for(var i = 1; i <= m; i++) {
+        for(let j = 1; j <= n; j++) {
+            for(let i = 1; i <= m; i++) {
+                let cost;
                 if(a[i-1] == b[j-1]) {
                     cost = 0;
                 }
@@ -113,30 +115,30 @@ function Fuzzy() {
         return matrix[m-1][n-1];
     }
 
-    self.n_gram = function(key, query) {
+    n_gram(key, query) {
         // Compares structure of two normalized strings
         // Vectorizes strings and calculates cosine similarity
-        var q_grams = self.gram_counter(query);
+        let q_grams = this.gram_counter(query);
         
-        var dot = 0;
-        var a_mag = 0;
-        var b_mag = 0;
+        let dot = 0;
+        let a_mag = 0;
+        let b_mag = 0;
 
-        for(var g in q_grams) {
+        for(let g in q_grams) {
             a_mag += Math.pow(q_grams[g], 2);
 
-            if(key in self.gram_db && g in self.gram_db[key]) {
-                dot += q_grams[g]*self.gram_db[key][g];
+            if(key in this.gram_db && g in this.gram_db[key]) {
+                dot += q_grams[g]*this.gram_db[key][g];
             } 
         }
 
-        if(key in self.gram_db) {
-            for(var g in self.gram_db[key]) {
-                b_mag += Math.pow(self.gram_db[key][g], 2);
+        if(key in this.gram_db) {
+            for(let g in this.gram_db[key]) {
+                b_mag += Math.pow(this.gram_db[key][g], 2);
             }
         }
         
-        var mag_prod = a_mag*b_mag;
+        let mag_prod = a_mag*b_mag;
         if(mag_prod == 0) {
             return 0; // Completely different strings  
         } 
@@ -145,43 +147,43 @@ function Fuzzy() {
         } 
     }
 
-    self.overlap_coefficient = function(a, b) {
+    overlap_coefficient(a, b) {
         // Szymkiewicz–Simpson coefficient 
         // Calculates overlap proportion relative to the smaller string
-        var tokens_a = a.split(" ");
-        var tokens_b = b.split(" ");
+        let tokens_a = a.split(" ");
+        let tokens_b = b.split(" ");
 
         // Unique tokens of each string
-        var set_a = [];
-        var set_b = [];
+        let set_a = [];
+        let set_b = [];
 
-        for(var i = 0; i < tokens_a.length; i++) {
-            var t = tokens_a[i].toLowerCase();
+        for(let i = 0; i < tokens_a.length; i++) {
+            let t = tokens_a[i].toLowerCase();
             if(!set_a.includes(t)) {
                 set_a.push(t);
             }
         }
         
-        for(var i = 0; i < tokens_b.length; i++) {
-            var t = tokens_b[i].toLowerCase();
+        for(let i = 0; i < tokens_b.length; i++) {
+            let t = tokens_b[i].toLowerCase();
             if(!set_b.includes(t)) {
                 set_b.push(t);
             }
         }
 
-        var intersection = 0;
-        var rel = Math.min(set_a.length, set_b.length);
+        let intersection = 0;
+        let rel = Math.min(set_a.length, set_b.length);
 
-        for(var i = 0; i < set_a.length; i++) {
-            for(var j = 0; j < set_b.length; j++) {
-                var t_a = set_a[i];
-                var t_b = set_b[j];
+        for(let i = 0; i < set_a.length; i++) {
+            for(let j = 0; j < set_b.length; j++) {
+                let t_a = set_a[i];
+                let t_b = set_b[j];
 
                 // Test token pair similarity
-                var dist = self.damlev_distance(t_a, t_b);
-                var norm = Math.max(t_a.length, t_b.length);
+                let dist = this.damlev_distance(t_a, t_b);
+                let norm = Math.max(t_a.length, t_b.length);
                 
-                if(1-dist/norm >= self.options.edit_threshold) {
+                if(1-dist/norm >= this.options.edit_threshold) {
                     intersection++;
                 }
             }
@@ -190,35 +192,35 @@ function Fuzzy() {
         return intersection / rel;
     }
 
-    self.compare = function(key, query) {
+    compare(key, query) {
         // Takes into account comparison operators
-        var grams = self.n_gram(key, query);
-        var overlap = self.overlap_coefficient(key, query);
+        let grams = this.n_gram(key, query);
+        let overlap = this.overlap_coefficient(key, query);
 
         // Final score
-        var score = Math.sqrt(overlap*overlap + grams*grams) / 2;
+        let score = Math.sqrt(overlap*overlap + grams*grams) / 2;
         return score;
     }
 
-    self.search = function(query) {
-        var dict = Object.keys(self.gram_db);
-        var scores = {};
-        var matches = [];
+    search(query) {
+        let dict = Object.keys(this.gram_db);
+        let scores = {};
+        let matches = [];
 
-        if(query.length < self.options.min_query || dict.length == 0) {
+        if(query.length < this.options.min_query || dict.length == 0) {
             return [];
         }
 
         // Matches string against members of a dictionary
-        for(var i = 0; i < dict.length; i++) {
-            var current = dict[i];
-            scores[current] = self.compare(current, query);
-            if(scores[current] >= self.options.score_threshold) {
+        for(let i = 0; i < dict.length; i++) {
+            let current = dict[i];
+            scores[current] = this.compare(current, query);
+            if(scores[current] >= this.options.score_threshold) {
                 matches.push(current);
             }
         }
 
-        if(self.options.sort) {
+        if(this.options.sort) {
             matches.sort(function(a, b) {
                 if(scores[a] < scores[b]) {
                     return 1;
@@ -230,7 +232,7 @@ function Fuzzy() {
             });
         }
         
-        if(self.options.all_matches) {
+        if(this.options.all_matches) {
             return matches;
         }
         else if(matches.length) {
@@ -241,3 +243,5 @@ function Fuzzy() {
         }
     }
 }
+
+exports.Fuzzy = Fuzzy;
