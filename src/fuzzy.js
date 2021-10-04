@@ -1,7 +1,9 @@
 class Fuzzy {
-    constructor() {
+    constructor(options) {
         this.gram_db = {};
-        this.options = {
+        this.options = options ? options : {};
+        
+        let defaultOpts = {
             sort : true,
             n_size : 3,
             min_query : 2,
@@ -9,6 +11,11 @@ class Fuzzy {
             edit_threshold : 0.6,
             all_matches : true
         };
+        for(let key in defaultOpts) {
+            if(!(key in this.options)) {
+                this.options[key] = defaultOpts[key];
+            }
+        }
     }
 
     normalize(string) {
@@ -18,6 +25,9 @@ class Fuzzy {
     }
 
     index(dict) {
+        // Reset the gram counts
+        this.gram_db = {};
+
         // Pre-process dictionary for fast n-gram search
         let n = this.options.n_size;
 
